@@ -98,6 +98,7 @@ data {
   int trend_indicator;  // 0 for linear, 1 for logistic, 2 for flat
   vector[K] s_a;        // Indicator of additive features
   vector[K] s_m;        // Indicator of multiplicative features
+  vector[T] w;          // weights
 }
 
 transformed data {
@@ -137,6 +138,6 @@ model {
   trend
   .* (1 + X * (beta .* s_m))
   + X * (beta .* s_a),
-  sigma_obs
+  sigma_obs * w
   );
 }

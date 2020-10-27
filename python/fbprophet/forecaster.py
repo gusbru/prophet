@@ -98,7 +98,8 @@ class Prophet(object):
 
         self.changepoints = changepoints
         if self.changepoints is not None:
-            self.changepoints = pd.Series(pd.to_datetime(self.changepoints), name='ds')
+            self.changepoints = pd.Series(
+                pd.to_datetime(self.changepoints), name='ds')
             self.n_changepoints = len(self.changepoints)
             self.specified_changepoints = True
         else:
@@ -147,9 +148,11 @@ class Prophet(object):
                     logger.debug("Trying to load backend: %s", i.name)
                     return self._load_stan_backend(i.name)
                 except Exception as e:
-                    logger.debug("Unable to load backend %s (%s), trying the next one", i.name, e)
+                    logger.debug(
+                        "Unable to load backend %s (%s), trying the next one", i.name, e)
         else:
-            self.stan_backend = StanBackendEnum.get_backend_class(stan_backend)()
+            self.stan_backend = StanBackendEnum.get_backend_class(
+                stan_backend)()
 
         logger.debug("Loaded stan backend: %s", self.stan_backend.get_type())
 
@@ -257,6 +260,9 @@ class Prophet(object):
             df['y'] = pd.to_numeric(df['y'])
             if np.isinf(df['y'].values).any():
                 raise ValueError('Found infinity in column y.')
+            if 'n' not in df:  # initialize the weights if not given
+                df['n'] = [1]*len(df['y'])
+
         if df['ds'].dtype == np.int64:
             df['ds'] = df['ds'].astype(str)
         df['ds'] = pd.to_datetime(df['ds'])
@@ -354,7 +360,7 @@ class Prophet(object):
                 standardize = False
             if standardize == 'auto':
                 if set(df[name].unique()) == set([1, 0]):
-                    standardize = False #  Don't standardize binary variables.
+                    standardize = False  # Don't standardize binary variables.
                 else:
                     standardize = True
             if standardize:
@@ -397,8 +403,8 @@ class Prophet(object):
             if self.n_changepoints > 0:
                 cp_indexes = (
                     np.linspace(0, hist_size - 1, self.n_changepoints + 1)
-                        .round()
-                        .astype(np.int)
+                    .round()
+                    .astype(np.int)
                 )
                 self.changepoints = (
                     self.history.iloc[cp_indexes]['ds'].tail(-1)
@@ -430,8 +436,8 @@ class Prophet(object):
         # convert to days since epoch
         t = np.array(
             (dates - datetime(1970, 1, 1))
-                .dt.total_seconds()
-                .astype(np.float)
+            .dt.total_seconds()
+            .astype(np.float)
         ) / (3600 * 24.)
         return np.column_stack([
             fun((2.0 * (i + 1) * np.pi * t / period))
@@ -861,7 +867,7 @@ class Prophet(object):
         component_cols.drop('zeros', axis=1, inplace=True, errors='ignore')
         # Validation
         if (max(component_cols['additive_terms']
-            + component_cols['multiplicative_terms']) > 1):
+                + component_cols['multiplicative_terms']) > 1):
             raise Exception('A bug occurred in seasonal components.')
         # Compare to the training, if set.
         if self.train_component_cols is not None:
@@ -1106,7 +1112,8 @@ class Prophet(object):
         history = df[df['y'].notnull()].copy()
         if history.shape[0] < 2:
             raise ValueError('Dataframe has less than 2 non-NaN rows.')
-        self.history_dates = pd.to_datetime(pd.Series(df['ds'].unique(), name='ds')).sort_values()
+        self.history_dates = pd.to_datetime(
+            pd.Series(df['ds'].unique(), name='ds')).sort_values()
 
         history = self.setup_dataframe(history, initialize_scales=True)
         self.history = history
@@ -1134,6 +1141,7 @@ class Prophet(object):
             'trend_indicator': trend_indicator[self.growth],
             's_a': component_cols['additive_terms'],
             's_m': component_cols['multiplicative_terms'],
+            'w': np.sqrt(history['n'].values)
         }
 
         if self.growth == 'linear':
@@ -1161,7 +1169,8 @@ class Prophet(object):
             for par in self.params:
                 self.params[par] = np.array([self.params[par]])
         elif self.mcmc_samples > 0:
-            self.params = self.stan_backend.sampling(stan_init, dat, self.mcmc_samples, **kwargs)
+            self.params = self.stan_backend.sampling(
+                stan_init, dat, self.mcmc_samples, **kwargs)
         else:
             self.params = self.stan_backend.fit(stan_init, dat, **kwargs)
 
@@ -1214,8 +1223,8 @@ class Prophet(object):
         # Add in forecast components
         df2 = pd.concat((df[cols], intervals, seasonal_components), axis=1)
         df2['yhat'] = (
-                df2['trend'] * (1 + df2['multiplicative_terms'])
-                + df2['additive_terms']
+            df2['trend'] * (1 + df2['multiplicative_terms'])
+            + df2['additive_terms']
         )
         return df2
 
@@ -1537,7 +1546,7 @@ class Prophet(object):
         we only fall back to it if the array contains NaNs. See
         https://github.com/facebook/prophet/issues/1310 for more details.
         """
-        fn =  np.nanpercentile if np.isnan(a).any() else np.percentile
+        fn = np.nanpercentile if np.isnan(a).any() else np.percentile
         return fn(a, *args, **kwargs)
 
     def make_future_dataframe(self, periods, freq='D', include_history=True):
